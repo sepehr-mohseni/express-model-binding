@@ -1,0 +1,33 @@
+# Source files
+src/
+
+# Tests
+tests/
+
+# Development configs
+.eslintrc.js
+.prettierrc
+tsconfig.json
+tsup.config.ts
+jest.config.js
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.github/
+
+# Documentation source
+docs/
+
+# Examples
+examples/
+
+# Dev specs
+devspecs.txt
+
+# Misc
+*.log
+coverage/
