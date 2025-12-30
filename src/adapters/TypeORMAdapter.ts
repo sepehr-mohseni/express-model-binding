@@ -6,7 +6,7 @@ import type {
   SelectQueryBuilder,
 } from 'typeorm';
 import { BaseAdapter } from '../core/BaseAdapter';
-import { QueryOptions, ModelMetadata, QueryModifier } from '../core/types';
+import { QueryOptions, ModelMetadata, QueryModifier, isValidFieldName } from '../core/types';
 import { BindingError } from '../errors';
 import { isUUID } from '../utils/validators';
 
@@ -79,6 +79,15 @@ export class TypeORMAdapter extends BaseAdapter<
       }
 
       if (options.where) {
+        // Security: Validate field names to prevent SQL injection
+        for (const fieldName of Object.keys(options.where)) {
+          if (!isValidFieldName(fieldName)) {
+            throw new BindingError(
+              `Invalid field name '${fieldName}': contains disallowed characters`,
+              new Error('SQL injection attempt detected')
+            );
+          }
+        }
         findOptions.where = {
           ...findOptions.where,
           ...options.where,

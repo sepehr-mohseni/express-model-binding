@@ -1,9 +1,15 @@
 import { isNumeric, isUUID, isObjectId } from './validators';
 
 /**
+ * Maximum input length for transformer functions
+ */
+const MAX_INPUT_LENGTH = 1024;
+
+/**
  * Transform a string value to a number if it's numeric
  */
 export function toNumber(value: string): number | string {
+  if (value.length > 20) return value;
   if (isNumeric(value)) {
     const num = parseInt(value, 10);
     if (!isNaN(num) && Number.isSafeInteger(num)) {
@@ -17,6 +23,7 @@ export function toNumber(value: string): number | string {
  * Transform a string value to a float if it's a valid decimal
  */
 export function toFloat(value: string): number | string {
+  if (value.length > 30) return value;
   const num = parseFloat(value);
   if (!isNaN(num) && isFinite(num)) {
     return num;
@@ -36,6 +43,9 @@ export function toBoolean(value: string): boolean {
  * Transform a string to lowercase
  */
 export function toLowerCase(value: string): string {
+  if (value.length > MAX_INPUT_LENGTH) {
+    return value.slice(0, MAX_INPUT_LENGTH).toLowerCase();
+  }
   return value.toLowerCase();
 }
 
@@ -43,6 +53,9 @@ export function toLowerCase(value: string): string {
  * Transform a string to uppercase
  */
 export function toUpperCase(value: string): string {
+  if (value.length > MAX_INPUT_LENGTH) {
+    return value.slice(0, MAX_INPUT_LENGTH).toUpperCase();
+  }
   return value.toUpperCase();
 }
 
@@ -50,6 +63,9 @@ export function toUpperCase(value: string): string {
  * Trim whitespace from a string
  */
 export function trim(value: string): string {
+  if (value.length > MAX_INPUT_LENGTH * 2) {
+    return value.slice(0, MAX_INPUT_LENGTH * 2).trim();
+  }
   return value.trim();
 }
 

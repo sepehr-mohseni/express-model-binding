@@ -2,6 +2,24 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { ModelBinder } from '../core/ModelBinder';
 import { BindOptions, ModelBindingsConfig } from '../core/types';
 import { logger } from '../utils/logger';
+import { isValidParamName } from '../utils/validators';
+import { BindingError } from '../errors';
+
+/**
+ * Maximum length for route parameter values to prevent DoS
+ */
+const MAX_PARAM_VALUE_LENGTH = 1024;
+
+/**
+ * Sanitize and validate parameter value
+ */
+function sanitizeParamValue(value: string | undefined): string {
+  if (!value) return '';
+  if (value.length > MAX_PARAM_VALUE_LENGTH) {
+    return value.slice(0, MAX_PARAM_VALUE_LENGTH);
+  }
+  return value;
+}
 
 /**
  * Create middleware that binds a model to a route parameter
@@ -21,6 +39,14 @@ export function bindModel(
   model: unknown,
   options: BindOptions = {}
 ): RequestHandler {
+  // Security: Validate param name at middleware creation time
+  if (!isValidParamName(paramName)) {
+    throw new BindingError(
+      `Invalid parameter name '${paramName}': must be alphanumeric with underscores`,
+      new Error('Invalid parameter name')
+    );
+  }
+
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Check if parameter exists in route
@@ -30,6 +56,10 @@ export function bindModel(
           return next();
         }
       }
+
+      // Security: Sanitize parameter value
+      const originalValue = req.params[paramName];
+      req.params[paramName] = sanitizeParamValue(originalValue);
 
       // Perform the binding
       const result = await ModelBinder.bind(req, res, paramName, model, options);
@@ -63,6 +93,16 @@ export function bindModel(
  * );
  */
 export function bindModels(bindings: ModelBindingsConfig): RequestHandler {
+  // Security: Validate all param names at middleware creation time
+  for (const paramName of Object.keys(bindings)) {
+    if (!isValidParamName(paramName)) {
+      throw new BindingError(
+        `Invalid parameter name '${paramName}': must be alphanumeric with underscores`,
+        new Error('Invalid parameter name')
+      );
+    }
+  }
+
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Bind all models sequentially
@@ -73,6 +113,10 @@ export function bindModels(bindings: ModelBindingsConfig): RequestHandler {
             continue;
           }
         }
+
+        // Security: Sanitize parameter value
+        const originalValue = req.params[paramName];
+        req.params[paramName] = sanitizeParamValue(originalValue);
 
         const result = await ModelBinder.bind(
           req,

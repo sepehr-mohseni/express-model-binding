@@ -1,6 +1,6 @@
 {
   "name": "express-model-binding",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Laravel-style route model binding for Express.js with support for multiple ORMs (Knex, Mongoose, TypeORM, Sequelize, Prisma)",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -43,7 +43,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "NODE_ENV=production tsup",
+    "build:dev": "tsup",
     "build:watch": "tsup --watch",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -55,7 +56,8 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build && npm run test",
     "docs": "typedoc --out docs src/index.ts",
-    "prisma:generate": "prisma generate --schema=./tests/fixtures/prisma/schema.prisma"
+    "prisma:generate": "prisma generate --schema=./tests/fixtures/prisma/schema.prisma",
+    "size": "npm pack --dry-run"
   },
   "keywords": [
     "express",

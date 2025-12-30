@@ -17,7 +17,11 @@ export type {
   TypedRequestHandler,
   ExtractModelType,
   MiddlewareFunction,
+  OperatorCondition,
 } from './core/types';
+
+// Security exports
+export { isValidFieldName, isOperatorCondition } from './core/types';
 
 // Adapter exports
 export { KnexAdapter, defineKnexModel } from './adapters/KnexAdapter';
@@ -55,4 +59,4 @@ export * from './utils/validators';
 export * from './utils/transformers';
 
 // Version
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';

@@ -342,4 +342,62 @@ describe('Middleware', () => {
       expect(next).toHaveBeenCalledWith();
     });
   });
+
+  describe('Security', () => {
+    it('should reject __proto__ as parameter name', () => {
+      expect(() => bindModel('__proto__', 'User')).toThrow(/Invalid parameter name/);
+    });
+
+    it('should reject constructor as parameter name', () => {
+      expect(() => bindModel('constructor', 'User')).toThrow(/Invalid parameter name/);
+    });
+
+    it('should reject prototype as parameter name', () => {
+      expect(() => bindModel('prototype', 'User')).toThrow(/Invalid parameter name/);
+    });
+
+    it('should reject invalid parameter names with special characters', () => {
+      expect(() => bindModel('user-id', 'User')).toThrow(/Invalid parameter name/);
+      expect(() => bindModel('user.id', 'User')).toThrow(/Invalid parameter name/);
+      expect(() => bindModel('user[0]', 'User')).toThrow(/Invalid parameter name/);
+    });
+
+    it('should reject parameter names starting with numbers', () => {
+      expect(() => bindModel('123user', 'User')).toThrow(/Invalid parameter name/);
+    });
+
+    it('should accept valid parameter names', () => {
+      expect(() => bindModel('user', 'User')).not.toThrow();
+      expect(() => bindModel('userId', 'User')).not.toThrow();
+      expect(() => bindModel('user_id', 'User')).not.toThrow();
+      expect(() => bindModel('_user', 'User')).not.toThrow();
+    });
+
+    it('should truncate overly long parameter values', async () => {
+      const userData = { id: 1, name: 'John' };
+      mockAdapter.setMockData('id:1', userData);
+
+      const longValue = '1' + 'x'.repeat(2000);
+      const req = createMockRequest({ params: { user: longValue } });
+      const res = createMockResponse();
+      const next = createMockNext();
+
+      const middleware = bindModel('user', 'User');
+      await middleware(req, res, next);
+
+      // Should truncate and not crash
+      expect(req.params.user.length).toBeLessThanOrEqual(1024);
+    });
+
+    it('should reject reserved property names in bindModels', () => {
+      // Note: { __proto__: x } in JS sets prototype, not a key, so we use Object.create
+      const maliciousConfig = Object.create(null);
+      maliciousConfig['constructor'] = { model: 'User' };
+      expect(() => bindModels(maliciousConfig)).toThrow(/Invalid parameter name/);
+
+      const maliciousConfig2 = Object.create(null);
+      maliciousConfig2['prototype'] = { model: 'User' };
+      expect(() => bindModels(maliciousConfig2)).toThrow(/Invalid parameter name/);
+    });
+  });
 });

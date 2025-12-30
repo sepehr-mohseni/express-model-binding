@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { BaseAdapter } from '../core/BaseAdapter';
-import { QueryOptions, ModelMetadata, isOperatorCondition } from '../core/types';
+import { QueryOptions, ModelMetadata, isOperatorCondition, isValidFieldName } from '../core/types';
 import { BindingError } from '../errors';
 import { isUUID } from '../utils/validators';
 
@@ -161,6 +161,14 @@ export class KnexAdapter extends BaseAdapter<
     where: Record<string, unknown>
   ): Knex.QueryBuilder {
     Object.entries(where).forEach(([column, value]) => {
+      // Security: Validate column names to prevent SQL injection
+      if (!isValidFieldName(column)) {
+        throw new BindingError(
+          `Invalid column name '${column}': contains disallowed characters`,
+          new Error('SQL injection attempt detected')
+        );
+      }
+
       if (value === null) {
         query = query.whereNull(column);
       } else if (Array.isArray(value)) {

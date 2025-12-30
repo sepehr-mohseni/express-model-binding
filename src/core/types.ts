@@ -241,6 +241,25 @@ export type TypedRequestHandler<
 export type MiddlewareFunction = RequestHandler;
 
 /**
+ * Allowed SQL operators to prevent injection
+ */
+const ALLOWED_OPERATORS = new Set([
+  '=', '!=', '<>', '<', '>', '<=', '>=',
+  'like', 'ilike', 'not like', 'not ilike',
+  'in', 'not in', 'between', 'not between',
+  'is', 'is not', 'is null', 'is not null',
+]);
+
+/**
+ * Validate field/column name to prevent injection
+ * Only allows alphanumeric, underscores, and dots (for nested fields)
+ */
+export function isValidFieldName(name: string): boolean {
+  if (!name || name.length > 128) return false;
+  return /^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(name);
+}
+
+/**
  * Operator condition for advanced WHERE clauses
  */
 export interface OperatorCondition {
@@ -249,8 +268,13 @@ export interface OperatorCondition {
 }
 
 /**
- * Check if value is an operator condition
+ * Check if value is a valid operator condition with whitelisted operator
  */
 export function isOperatorCondition(value: unknown): value is OperatorCondition {
-  return typeof value === 'object' && value !== null && 'operator' in value && 'value' in value;
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('operator' in value) || !('value' in value)) return false;
+  const op = (value as OperatorCondition).operator;
+  if (typeof op !== 'string') return false;
+  // Security: Only allow whitelisted operators
+  return ALLOWED_OPERATORS.has(op.toLowerCase().trim());
 }

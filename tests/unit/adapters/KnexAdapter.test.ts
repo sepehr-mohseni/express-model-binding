@@ -150,4 +150,50 @@ describe('KnexAdapter', () => {
       expect(adapter.supportsSoftDeletes('users')).toBe(false);
     });
   });
+
+  describe('Security', () => {
+    it('should reject invalid column names in where conditions', async () => {
+      mockQueryBuilder.first.mockResolvedValue({ id: 1 });
+
+      const maliciousOptions: QueryOptions = {
+        where: { 'id; DROP TABLE users; --': 1 },
+      };
+
+      await expect(adapter.findByKey('users', 'id', 1, maliciousOptions)).rejects.toThrow(
+        /Invalid column name/
+      );
+    });
+
+    it('should reject column names with quotes', async () => {
+      mockQueryBuilder.first.mockResolvedValue({ id: 1 });
+
+      const maliciousOptions: QueryOptions = {
+        where: { "name'": 'test' },
+      };
+
+      await expect(adapter.findByKey('users', 'id', 1, maliciousOptions)).rejects.toThrow(
+        /Invalid column name/
+      );
+    });
+
+    it('should allow valid column names with underscores', async () => {
+      mockQueryBuilder.first.mockResolvedValue({ id: 1 });
+
+      const validOptions: QueryOptions = {
+        where: { user_name: 'test', created_at: '2024-01-01' },
+      };
+
+      await expect(adapter.findByKey('users', 'id', 1, validOptions)).resolves.toBeDefined();
+    });
+
+    it('should allow nested field names with dots', async () => {
+      mockQueryBuilder.first.mockResolvedValue({ id: 1 });
+
+      const validOptions: QueryOptions = {
+        where: { 'profile.name': 'test' },
+      };
+
+      await expect(adapter.findByKey('users', 'id', 1, validOptions)).resolves.toBeDefined();
+    });
+  });
 });

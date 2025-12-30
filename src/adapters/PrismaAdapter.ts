@@ -1,5 +1,5 @@
 import { BaseAdapter } from '../core/BaseAdapter';
-import { QueryOptions, ModelMetadata, QueryModifier } from '../core/types';
+import { QueryOptions, ModelMetadata, QueryModifier, isValidFieldName } from '../core/types';
 import { InvalidModelError, BindingError } from '../errors';
 import { isUUID } from '../utils/validators';
 
@@ -63,6 +63,15 @@ export class PrismaAdapter extends BaseAdapter<string, unknown, PrismaFindArgs> 
       };
 
       if (options.where) {
+        // Security: Validate field names to prevent injection
+        for (const fieldName of Object.keys(options.where)) {
+          if (!isValidFieldName(fieldName)) {
+            throw new BindingError(
+              `Invalid field name '${fieldName}': contains disallowed characters`,
+              new Error('Injection attempt detected')
+            );
+          }
+        }
         queryOptions.where = {
           ...queryOptions.where,
           ...options.where,

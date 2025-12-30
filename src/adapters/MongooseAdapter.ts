@@ -1,6 +1,6 @@
 import type { Model, Document, Query, PopulateOptions, Schema } from 'mongoose';
 import { BaseAdapter } from '../core/BaseAdapter';
-import { QueryOptions, ModelMetadata, QueryModifier } from '../core/types';
+import { QueryOptions, ModelMetadata, QueryModifier, isValidFieldName } from '../core/types';
 import { BindingError } from '../errors';
 import { isObjectId } from '../utils/validators';
 
@@ -57,6 +57,13 @@ export class MongooseAdapter extends BaseAdapter<MongooseModel, Document, Mongoo
 
       if (options.where) {
         Object.entries(options.where).forEach(([field, val]) => {
+          // Security: Validate field names to prevent NoSQL injection
+          if (!isValidFieldName(field)) {
+            throw new BindingError(
+              `Invalid field name '${field}': contains disallowed characters`,
+              new Error('NoSQL injection attempt detected')
+            );
+          }
           query = query.where(field).equals(val);
         });
       }

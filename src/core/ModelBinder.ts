@@ -3,6 +3,7 @@ import { IORMAdapter, BindOptions, BindingContext, BindingResult } from './types
 import { AdapterNotSetError, ModelNotFoundError, BindingError } from '../errors';
 import { Cache } from '../utils/cache';
 import { logger } from '../utils/logger';
+import { isValidParamName } from '../utils/validators';
 
 /**
  * Express request with bound models
@@ -210,6 +211,13 @@ export class ModelBinder {
   }
 
   private static attachToRequest(req: Request, key: string, value: unknown): void {
+    // Security: Prevent prototype pollution attacks using centralized validation
+    if (!isValidParamName(key)) {
+      throw new BindingError(
+        `Invalid attachment key '${key}': reserved or invalid property name`,
+        new Error('Security violation: attempted prototype pollution')
+      );
+    }
     (req as RequestWithModels)[key] = value;
   }
 
@@ -220,14 +228,16 @@ export class ModelBinder {
     options: BindOptions
   ): string {
     const modelName = this.getModelName(model);
+    // Security: Use only safe, primitive values for cache key to prevent injection
+    const safeKey = String(key).slice(0, 64);
+    const safeValue = String(value).slice(0, 256);
     const optionsHash = JSON.stringify({
-      key,
-      include: options.include,
-      where: options.where,
-      select: options.select,
+      key: safeKey,
+      include: Array.isArray(options.include) ? options.include.slice(0, 10) : undefined,
+      select: Array.isArray(options.select) ? options.select.slice(0, 20) : undefined,
     });
 
-    return `${modelName}:${key}:${String(value)}:${optionsHash}`;
+    return `${modelName}:${safeKey}:${safeValue}:${optionsHash}`;
   }
 
   private static getModelName(model: unknown): string {
